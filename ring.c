@@ -97,7 +97,6 @@ static void comeca_sem_bastao(void)
 		resposta = receber(&pacote);
 		passar(&pacote);
 	} while (resposta != BASTAO);
-	printf("bastão recebido!\n");
 	tenho_bastao = TRUE;
 	recebe_bastao();
 }
@@ -164,4 +163,5 @@ void passar(struct s_pacote *pacote)
 
 void recebe_bastao(void)
 {
+	printf("bastão recebido!\n");
 }
