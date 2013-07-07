@@ -45,7 +45,7 @@ static int abre_socket_servidor(struct sockaddr_in *end_servidor)
 	}
 	memset(end_servidor, 0, sizeof(struct sockaddr_in));
 	end_servidor->sin_family = AF_INET;
-	end_servidor->sin_port = htons(PORTA);
+	end_servidor->sin_port = htons(PORTA + 1);
 	end_servidor->sin_addr.s_addr = htonl(INADDR_ANY);
 	if (bind(sok, (struct sockaddr *)end_servidor, sizeof(struct sockaddr_in))
 	    < 0) {
@@ -109,8 +109,6 @@ int mandar(char *destino, char *mensagem, char tipo)
 	fd_set readfds;
 	struct timeval tval;
 
-	tval.tv_sec = TIMEOUT_RESPOSTA;
-	tval.tv_usec = 0;
 	memset(&pacote, 0, sizeof(pacote));
 	pacote.tipo = tipo;
 	strcpy(pacote.destino, destino);
@@ -119,6 +117,9 @@ int mandar(char *destino, char *mensagem, char tipo)
 		strcpy(pacote.mensagem, mensagem);
 	resposta = 0;
 	while (!resposta) {
+		resposta = 0;
+		tval.tv_sec = TIMEOUT_RESPOSTA;
+		tval.tv_usec = 0;
 		do {
 			enviados = sendto(socket_cliente, &pacote, sizeof(struct s_pacote), 0, (struct sockaddr*)&end_cliente, sizeof(end_cliente));
 		} while (enviados <= 0);
