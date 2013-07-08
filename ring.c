@@ -4,7 +4,6 @@ void abre_sockets(void)
 {
 	FILE *file;
 	int i;
-	//struct hostent hostent_local;
 
 	TAILQ_INIT(&my_tailq_head);
 	pthread_mutex_init(&mutex, NULL);
@@ -22,7 +21,6 @@ void abre_sockets(void)
 	if (i > 4)
 		erro("erro ao ler CONTATOS");
 	inext = (ihost + 1) % N_CONTATOS;
-	//printf("host: %s\nnext: %s\n", contatos[ihost], contatos[inext]);
 	socket_servidor = abre_socket_servidor(&end_servidor);
 	socket_cliente = abre_socket_cliente(&end_cliente, contatos[inext]);
 	if (ihost == 0) {
@@ -70,33 +68,28 @@ int abre_socket_cliente(struct sockaddr_in *end_cliente, char *destino)
 
 void comeca_com_bastao(void)
 {
-	tenho_bastao = TRUE;
-	//printf("começando com o bastão!\n");
-	//mandar("todos", NULL, PEDE_BASTAO);
-	mandar("todos", "pedindo bastao", PEDE_BASTAO);
+	mandar(TODOS, "pedindo bastao", PEDE_BASTAO);
 	recebe_bastao();
 }
 
 void comeca_sem_bastao(void)
 {
 	struct s_pacote pacote;
-	char resposta;
+	char resposta, *privado;
 
-	tenho_bastao = FALSE;
-	//printf("esperando pelo bastão...\n");
 	memset(&pacote, 0, sizeof(pacote));
 	while ((resposta = receber(&pacote)) != BASTAO) {
-		if (resposta == PRINT && (!strcmp(pacote.destino, hostname) || !strcmp(pacote.destino, "todos"))) {
-			printf("<%s>: <%s>\n", pacote.origem, pacote.mensagem);
+		if (resposta == PRINT && (pacote.destino == ihost || pacote.destino == TODOS)) {
+			privado = pacote.destino == ihost ? "(privado)" : "\0";
+			printf("<%s>%s: <%s>\n", contatos[(int)pacote.origem], privado, pacote.mensagem);
 		}
 		passar(&pacote);
 		memset(&pacote, 0, sizeof(pacote));
 	}
-	tenho_bastao = TRUE;
 	recebe_bastao();
 }
 
-void mandar(char *destino, char *mensagem, char tipo)
+void mandar(char destino, char *mensagem, char tipo)
 {
 	int enviados;
 	struct s_pacote pacote, pacote_resposta;
@@ -106,8 +99,8 @@ void mandar(char *destino, char *mensagem, char tipo)
 
 	memset(&pacote, 0, sizeof(pacote));
 	pacote.tipo = tipo;
-	strcpy(pacote.destino, destino);
-	strcpy(pacote.origem, hostname);
+	pacote.destino = destino;
+	pacote.origem = ihost;
 	if (mensagem)
 		strncpy(pacote.mensagem, mensagem, sizeof(pacote.mensagem));
 	else 
@@ -119,11 +112,8 @@ void mandar(char *destino, char *mensagem, char tipo)
 		tval.tv_sec = TIMEOUT_RESPOSTA;
 		tval.tv_usec = 0;
 		do {
-			//if (tipo == PRINT) printf("mandando <%s> pra <%s>\n", pacote.mensagem, pacote.destino);
 			enviados = sendto(socket_cliente, &pacote, sizeof(struct s_pacote), 0, (struct sockaddr*)&end_cliente, sizeof(end_cliente));
-			//printf("enviados %db\n", enviados); 
 		} while (enviados <= 0);
-		//printf("pacote enviado\n");
 		if (tipo == BASTAO)
 			return;
 		FD_ZERO(&readfds);
@@ -131,8 +121,6 @@ void mandar(char *destino, char *mensagem, char tipo)
 		pronto = select(socket_servidor + 1, &readfds, NULL, NULL, &tval);
 		if (pronto) {
 			resposta = receber(&pacote_resposta);
-			//printf("resposta recebida!\n");
-			//conferir pacote_resposta.lido
 			if (resposta != tipo) 
 				printf("resposta diferente do tipo?\n");
 			ok = TRUE;
@@ -150,9 +138,7 @@ char receber(struct s_pacote *pacote)
 	do {
 		memset(pacote, 0, cliente_tam);
 		recebidos = recvfrom(socket_servidor, pacote, sizeof(struct s_pacote), 0, (struct sockaddr*)&end_servidor, (socklen_t*)&cliente_tam);
-		//printf("recebidos %db\n", recebidos);
 	} while (!recebidos);
-	//printf("pacote recebido\n");
 
 	return pacote->tipo;
 }
@@ -165,7 +151,6 @@ void passar(struct s_pacote *pacote)
 	do {
 		enviados = sendto(socket_cliente, pacote, sizeof(struct s_pacote), 0, (struct sockaddr*)&end_cliente, sizeof(end_cliente));
 	} while (enviados <= 0);
-	//printf("pacote passado pra frente\n");
 }
 
 void recebe_bastao(void)
@@ -175,24 +160,20 @@ void recebe_bastao(void)
 	struct tailq_entry *item;
 	
 	start = time(NULL);
-	//printf("bastão recebido!\n");
 	while ((diff = (int) difftime(time(NULL), start)) < TEMPO_BASTAO) {
 		pthread_mutex_lock(&mutex);
 		if (TAILQ_EMPTY(&my_tailq_head)) {
 			pthread_mutex_unlock(&mutex);
-			//break;
+			break;
 		} else {
 			item = TAILQ_FIRST(&my_tailq_head);
 			TAILQ_REMOVE(&my_tailq_head, item, entries);
-			//printf("desenfilando mensage <%s> pra <%s>\n", item->mensagem, item->destino);
 			pthread_mutex_unlock(&mutex);
-			//mandar(item->destino, item->mensagem, PRINT);
 			mandar_str(item->destino, item->mensagem);
 			free(item);
 		}
 	}
-	//printf("tempo do bastão esgotado...\n");
-	mandar(contatos[inext], "passando o bastão", BASTAO);
+	mandar(inext, "passando o bastão", BASTAO);
 	comeca_sem_bastao();
 }
 
@@ -202,7 +183,7 @@ void erro(char *msg)
 	exit(1);
 }
 
-void mandar_str(char *destino, char *mensagem)
+void mandar_str(char destino, char *mensagem)
 {	
 	char buffer[SIZE_MSG], *ptr;
 	int i;

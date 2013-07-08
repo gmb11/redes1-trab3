@@ -17,7 +17,7 @@ void *ring(void *p)
 
 void *chat(void *p)
 {
-	char buffer[SIZE_BUFFER], *ptr, *ptr2;
+	char buffer[SIZE_BUFFER], destino[SIZE_MSG], *ptr, *ptr2;
 	struct tailq_entry *item;
 
 	item = NULL;
@@ -27,7 +27,7 @@ void *chat(void *p)
 			erro("erro no malloc");
 		fgets(buffer, sizeof(buffer), stdin);
 		ptr = buffer;
-		ptr2 = item->destino;
+		ptr2 = destino;
 		if (ptr[0] == '/') {
 			ptr++;
 			if (!strncmp(ptr, "listar", 6)) {
@@ -36,15 +36,19 @@ void *chat(void *p)
 			}
 			while ((*ptr2++ = *ptr++) != ' ');
 			*--ptr2 = '\0';
+			item->destino = (char) contato_id(destino);
+			if (item->destino < 0) {
+				printf("contato inexistente...\n");
+				continue;
+			}
 		} else {
-			strcpy(item->destino, "todos");
+			item->destino = TODOS;
 		}
 		ptr2 = strchr(ptr, '\n');
 		if (ptr2) 
 			*ptr2 = '\0';
 		strcpy(item->mensagem, ptr);
 		pthread_mutex_lock(&mutex);
-		//printf("enfilando mensagem <%s> pra <%s>\n", item->mensagem, item->destino);
 		TAILQ_INSERT_TAIL(&my_tailq_head, item, entries);
 		pthread_mutex_unlock(&mutex);
 		item = NULL;
@@ -60,4 +64,19 @@ void listar_contatos(void)
 	for (i = 0; i < N_CONTATOS; i++) {
 		printf(">> %s\n", contatos[i]);
 	}
+}
+
+int contato_id(char *nome)
+{
+	int i;
+
+	if (!strcmp(nome, "todos"))
+		return TODOS;
+	for (i = 0; i < N_CONTATOS; i++) {
+		if (!strcmp(nome, contatos[i])) {
+			return i;
+		}
+	}
+
+	return -1;
 }
