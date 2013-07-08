@@ -45,7 +45,7 @@ static int abre_socket_servidor(struct sockaddr_in *end_servidor)
 	}
 	memset(end_servidor, 0, sizeof(struct sockaddr_in));
 	end_servidor->sin_family = AF_INET;
-	end_servidor->sin_port = htons(PORTA + 1);
+	end_servidor->sin_port = htons(PORTA);
 	end_servidor->sin_addr.s_addr = htonl(INADDR_ANY);
 	if (bind(sok, (struct sockaddr *)end_servidor, sizeof(struct sockaddr_in))
 	    < 0) {
@@ -141,10 +141,10 @@ char receber(struct s_pacote *pacote)
 	int recebidos, cliente_tam;
 	char tipo;
 
-	cliente_tam = sizeof(struct s_pacote);
+	cliente_tam = sizeof(end_servidor);
 	do {
 		memset(pacote, 0, cliente_tam);
-		recebidos = recvfrom(socket_servidor, pacote, cliente_tam, 0, (struct sockaddr*)&end_servidor, (socklen_t*)&cliente_tam);
+		recebidos = recvfrom(socket_servidor, pacote, sizeof(pacote), 0, (struct sockaddr*)&end_servidor, (socklen_t*)&cliente_tam);
 	} while (!recebidos);
 	printf("pacote recebido\n");
 
