@@ -1,8 +1,8 @@
-#include "ring.h"
+#include "chat.h"
 
 int main(int argc, char **argv)
 {
-	abre_sockets();
+	abrir_chat();
 
 	printf("saindo...\n");
 	return 0;

@@ -6,6 +6,8 @@ void abre_sockets(void)
 	int i;
 	//struct hostent hostent_local;
 
+	TAILQ_INIT(&my_tailq_head);
+	pthread_mutex_init(&mutex, NULL);
 	file = fopen(CONTATOS, "r");
 	if (!file)
 		erro("erro ao abrir CONTATOS");
@@ -20,7 +22,7 @@ void abre_sockets(void)
 	if (i > 4)
 		erro("erro ao ler CONTATOS");
 	inext = (ihost + 1) % N_CONTATOS;
-	printf("host: %s\nnext: %s\n", contatos[ihost], contatos[inext]);
+	//printf("host: %s\nnext: %s\n", contatos[ihost], contatos[inext]);
 	socket_servidor = abre_socket_servidor(&end_servidor);
 	socket_cliente = abre_socket_cliente(&end_cliente, contatos[inext]);
 	if (ihost == 0) {
@@ -30,7 +32,7 @@ void abre_sockets(void)
 	}
 }
 
-static int abre_socket_servidor(struct sockaddr_in *end_servidor)
+int abre_socket_servidor(struct sockaddr_in *end_servidor)
 {
 	int sok;
 
@@ -48,7 +50,7 @@ static int abre_socket_servidor(struct sockaddr_in *end_servidor)
 	return sok;
 }
 
-static int abre_socket_cliente(struct sockaddr_in *end_cliente, char *destino)
+int abre_socket_cliente(struct sockaddr_in *end_cliente, char *destino)
 {
 	int sok;
 
@@ -66,30 +68,32 @@ static int abre_socket_cliente(struct sockaddr_in *end_cliente, char *destino)
 	return sok;
 }
 
-static void comeca_com_bastao(void)
+void comeca_com_bastao(void)
 {
 	struct s_pacote pacote;
 	char resposta;
 
 	tenho_bastao = TRUE;
-	printf("começando com o bastão!\n");
+	//printf("começando com o bastão!\n");
 	//mandar("todos", NULL, PEDE_BASTAO);
-	mandar("todos", "pedindo bastao\n", PEDE_BASTAO);
+	mandar("todos", "pedindo bastao", PEDE_BASTAO);
 	recebe_bastao();
 }
 
-static void comeca_sem_bastao(void)
+void comeca_sem_bastao(void)
 {
 	struct s_pacote pacote;
 	char resposta;
 
 	tenho_bastao = FALSE;
-	printf("esperando pelo bastão...\n");
+	//printf("esperando pelo bastão...\n");
+	memset(&pacote, 0, sizeof(pacote));
 	while ((resposta = receber(&pacote)) != BASTAO) {
-		if (!strcmp(pacote.destino, hostname) || !strcmp(pacote.destino, "todos")) {
-			printf("%s", pacote.mensagem);
+		if (resposta == PRINT && (!strcmp(pacote.destino, hostname) || !strcmp(pacote.destino, "todos"))) {
+			printf("<%s>: <%s>\n", pacote.origem, pacote.mensagem);
 		}
 		passar(&pacote);
+		memset(&pacote, 0, sizeof(pacote));
 	}
 	tenho_bastao = TRUE;
 	recebe_bastao();
@@ -109,6 +113,8 @@ int mandar(char *destino, char *mensagem, char tipo)
 	strcpy(pacote.origem, hostname);
 	if (mensagem)
 		strncpy(pacote.mensagem, mensagem, sizeof(pacote.mensagem));
+	else 
+		printf("mensagem nula?\n");
 	resposta = 0;
 	ok = FALSE;
 	while (!ok) {
@@ -116,9 +122,11 @@ int mandar(char *destino, char *mensagem, char tipo)
 		tval.tv_sec = TIMEOUT_RESPOSTA;
 		tval.tv_usec = 0;
 		do {
+			//if (tipo == PRINT) printf("mandando <%s> pra <%s>\n", pacote.mensagem, pacote.destino);
 			enviados = sendto(socket_cliente, &pacote, sizeof(struct s_pacote), 0, (struct sockaddr*)&end_cliente, sizeof(end_cliente));
+			//printf("enviados %db\n", enviados); 
 		} while (enviados <= 0);
-		printf("pacote enviado\n");
+		//printf("pacote enviado\n");
 		if (tipo == BASTAO)
 			return;
 		FD_ZERO(&readfds);
@@ -126,11 +134,11 @@ int mandar(char *destino, char *mensagem, char tipo)
 		pronto = select(socket_servidor + 1, &readfds, NULL, NULL, &tval);
 		if (pronto) {
 			resposta = receber(&pacote_resposta);
-			printf("resposta recebida!\n");
+			//printf("resposta recebida!\n");
 			//conferir pacote_resposta.lido
 			ok = TRUE;
 		} else {
-			printf("time out de resposta...\n");
+			//printf("time out de resposta...\n");
 		}
 	}
 }
@@ -143,9 +151,10 @@ char receber(struct s_pacote *pacote)
 	cliente_tam = sizeof(end_servidor);
 	do {
 		memset(pacote, 0, cliente_tam);
-		recebidos = recvfrom(socket_servidor, pacote, sizeof(pacote), 0, (struct sockaddr*)&end_servidor, (socklen_t*)&cliente_tam);
+		recebidos = recvfrom(socket_servidor, pacote, sizeof(struct s_pacote), 0, (struct sockaddr*)&end_servidor, (socklen_t*)&cliente_tam);
+		//printf("recebidos %db\n", recebidos);
 	} while (!recebidos);
-	printf("pacote recebido\n");
+	//printf("pacote recebido\n");
 
 	return pacote->tipo;
 }
@@ -158,7 +167,7 @@ void passar(struct s_pacote *pacote)
 	do {
 		enviados = sendto(socket_cliente, pacote, sizeof(struct s_pacote), 0, (struct sockaddr*)&end_cliente, sizeof(end_cliente));
 	} while (enviados <= 0);
-	printf("pacote passado pra frente\n");
+	//printf("pacote passado pra frente\n");
 }
 
 void recebe_bastao(void)
@@ -166,15 +175,25 @@ void recebe_bastao(void)
 	time_t start, stop;
 	int diff;
 	struct s_pacote pacote;
+	struct tailq_entry *item;
 	
 	start = time(NULL);
-	printf("bastão recebido!\n");
+	//printf("bastão recebido!\n");
 	while ((diff = (int) difftime(time(NULL), start)) < TEMPO_BASTAO) {
-		//leitura não pode ser bloqueante, melhor usar outra thread
-		fgets(pacote.mensagem, sizeof(pacote.mensagem), stdin);
-		mandar("todos", pacote.mensagem, PRINT);
+		pthread_mutex_lock(&mutex);
+		if (TAILQ_EMPTY(&my_tailq_head)) {
+			pthread_mutex_unlock(&mutex);
+			//break;
+		} else {
+			item = TAILQ_FIRST(&my_tailq_head);
+			TAILQ_REMOVE(&my_tailq_head, item, entries);
+			//printf("desenfilando mensage <%s> pra <%s>\n", item->mensagem, item->destino);
+			mandar(item->destino, item->mensagem, PRINT);
+			free(item);
+			pthread_mutex_unlock(&mutex);
+		}
 	}
-	printf("tempo do bastão esgotado...\n");
+	//printf("tempo do bastão esgotado...\n");
 	mandar(contatos[inext], "passando o bastão", BASTAO);
 	comeca_sem_bastao();
 }
