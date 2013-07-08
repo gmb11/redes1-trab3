@@ -15,21 +15,23 @@
 #define CONTATOS "contatos.txt"
 #define N_CONTATOS 4
 #define SIZE_BUFFER 256
+#define SIZE_MSG 30
 
-#define TIMEOUT_RESPOSTA 3
-#define TEMPO_BASTAO 9
+#define TIMEOUT_RESPOSTA 1
+#define TEMPO_BASTAO 2
 
 /*tipos de mensagem*/
 #define BASTAO 1
 #define PEDE_BASTAO 2
 #define PRINT 3
+#define SLEEP 4 //pra forçar timeout
 
 struct s_pacote {
 	char tipo;
 	char lido;
 	char origem[15];
 	char destino[15];
-	char mensagem[30];
+	char mensagem[SIZE_MSG];
 	char par;
 	char seq;
 };
@@ -51,8 +53,9 @@ int abre_socket_cliente(struct sockaddr_in *end_cliente, char *destino);
 char paridade(struct s_pacote pacote);
 void comeca_com_bastao(void);
 void comeca_sem_bastao(void);
-int mandar(char *destino, char *mensagem, char tipo);
 char receber(struct s_pacote *pacote);
 void passar(struct s_pacote *pacote);
 void recebe_bastao(void);
 void erro(char *msg);
+void mandar(char *destino, char *mensagem, char tipo);
+void mandar_str(char *destino, char *mensagem);

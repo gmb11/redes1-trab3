@@ -70,9 +70,6 @@ int abre_socket_cliente(struct sockaddr_in *end_cliente, char *destino)
 
 void comeca_com_bastao(void)
 {
-	struct s_pacote pacote;
-	char resposta;
-
 	tenho_bastao = TRUE;
 	//printf("começando com o bastão!\n");
 	//mandar("todos", NULL, PEDE_BASTAO);
@@ -99,7 +96,7 @@ void comeca_sem_bastao(void)
 	recebe_bastao();
 }
 
-int mandar(char *destino, char *mensagem, char tipo)
+void mandar(char *destino, char *mensagem, char tipo)
 {
 	int enviados;
 	struct s_pacote pacote, pacote_resposta;
@@ -136,6 +133,8 @@ int mandar(char *destino, char *mensagem, char tipo)
 			resposta = receber(&pacote_resposta);
 			//printf("resposta recebida!\n");
 			//conferir pacote_resposta.lido
+			if (resposta != tipo) 
+				printf("resposta diferente do tipo?\n");
 			ok = TRUE;
 		} else {
 			//printf("time out de resposta...\n");
@@ -146,7 +145,6 @@ int mandar(char *destino, char *mensagem, char tipo)
 char receber(struct s_pacote *pacote)
 {
 	int recebidos, cliente_tam;
-	char tipo;
 
 	cliente_tam = sizeof(end_servidor);
 	do {
@@ -172,9 +170,8 @@ void passar(struct s_pacote *pacote)
 
 void recebe_bastao(void)
 {
-	time_t start, stop;
+	time_t start;
 	int diff;
-	struct s_pacote pacote;
 	struct tailq_entry *item;
 	
 	start = time(NULL);
@@ -188,9 +185,10 @@ void recebe_bastao(void)
 			item = TAILQ_FIRST(&my_tailq_head);
 			TAILQ_REMOVE(&my_tailq_head, item, entries);
 			//printf("desenfilando mensage <%s> pra <%s>\n", item->mensagem, item->destino);
-			mandar(item->destino, item->mensagem, PRINT);
-			free(item);
 			pthread_mutex_unlock(&mutex);
+			//mandar(item->destino, item->mensagem, PRINT);
+			mandar_str(item->destino, item->mensagem);
+			free(item);
 		}
 	}
 	//printf("tempo do bastão esgotado...\n");
@@ -202,4 +200,21 @@ void erro(char *msg)
 {
 	printf("%s\n", msg);
 	exit(1);
+}
+
+void mandar_str(char *destino, char *mensagem)
+{	
+	char buffer[SIZE_MSG], *ptr;
+	int i;
+
+	ptr = mensagem;
+	while (*ptr != '\0') {
+		memset(buffer, 0, sizeof(buffer));
+		for (i = 0; i < SIZE_MSG; i++) {
+			buffer[i] = *ptr++;
+			if (*ptr == '\0')
+				break;
+		}
+		mandar(destino, buffer, PRINT);
+	}
 }

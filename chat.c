@@ -12,6 +12,7 @@ void abrir_chat(void)
 void *ring(void *p)
 {
 	abre_sockets();
+	return (void*)0x0;
 }
 
 void *chat(void *p)
@@ -19,8 +20,9 @@ void *chat(void *p)
 	char buffer[SIZE_BUFFER], *ptr, *ptr2;
 	struct tailq_entry *item;
 
+	item = NULL;
 	while (1) {
-		item = malloc(sizeof(*item));
+		item = item ? item : malloc(sizeof(*item));
 		if (!item)
 			erro("erro no malloc");
 		fgets(buffer, sizeof(buffer), stdin);
@@ -28,6 +30,10 @@ void *chat(void *p)
 		ptr2 = item->destino;
 		if (ptr[0] == '/') {
 			ptr++;
+			if (!strncmp(ptr, "listar", 6)) {
+				listar_contatos();
+				continue;
+			}
 			while ((*ptr2++ = *ptr++) != ' ');
 			*--ptr2 = '\0';
 		} else {
@@ -41,7 +47,9 @@ void *chat(void *p)
 		//printf("enfilando mensagem <%s> pra <%s>\n", item->mensagem, item->destino);
 		TAILQ_INSERT_TAIL(&my_tailq_head, item, entries);
 		pthread_mutex_unlock(&mutex);
+		item = NULL;
 	}
+	return (void*)0x0;
 }
 
 void listar_contatos(void)
