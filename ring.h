@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
+#include <time.h>
 #include <sys/socket.h>
 #include <netdb.h>
 
@@ -11,10 +12,12 @@
 #define CONTATOS "contatos.txt"
 #define N_CONTATOS 4
 #define TIMEOUT_RESPOSTA 3
+#define TEMPO_BASTAO 9
 
 /*tipos de mensagem*/
 #define BASTAO 1
 #define PEDE_BASTAO 2
+#define PRINT 3
 
 struct s_pacote {
 	char tipo;
@@ -40,3 +43,4 @@ int mandar(char *destino, char *mensagem, char tipo);
 char receber(struct s_pacote *pacote);
 void passar(struct s_pacote *pacote);
 void recebe_bastao(void);
+void erro(char *msg);

@@ -7,10 +7,8 @@ void abre_sockets(void)
 	//struct hostent hostent_local;
 
 	file = fopen(CONTATOS, "r");
-	if (!file) {
-		perror("erro ao abrir CONTATOS\n");
-		exit(1);
-	}
+	if (!file)
+		erro("erro ao abrir CONTATOS");
 	gethostname(hostname, 15);
 	i = 0;
 	while (fscanf(file, "%s", contatos[i]) != EOF) {
@@ -19,10 +17,8 @@ void abre_sockets(void)
 		}
 		i++;
 	}
-	if (i > 4) {
-		perror("erro ao ler CONTATOS\n");
-		exit(1);
-	}
+	if (i > 4)
+		erro("erro ao ler CONTATOS");
 	inext = (ihost + 1) % N_CONTATOS;
 	printf("host: %s\nnext: %s\n", contatos[ihost], contatos[inext]);
 	socket_servidor = abre_socket_servidor(&end_servidor);
@@ -39,19 +35,15 @@ static int abre_socket_servidor(struct sockaddr_in *end_servidor)
 	int sok;
 
 	sok = socket(AF_INET, SOCK_DGRAM, 0);
-	if (sok < 0) {
-		perror("erro ao abrir socket servidor\n");
-		exit(1);
-	}
+	if (sok < 0)
+		erro("erro ao abrir socket servidor");
 	memset(end_servidor, 0, sizeof(struct sockaddr_in));
 	end_servidor->sin_family = AF_INET;
 	end_servidor->sin_port = htons(PORTA);
 	end_servidor->sin_addr.s_addr = htonl(INADDR_ANY);
 	if (bind(sok, (struct sockaddr *)end_servidor, sizeof(struct sockaddr_in))
-	    < 0) {
-		perror("erro no bind\n");
-		exit(1);
-	}
+	    < 0)
+		erro("erro no bind");
 
 	return sok;
 }
@@ -61,10 +53,8 @@ static int abre_socket_cliente(struct sockaddr_in *end_cliente, char *destino)
 	int sok;
 
 	sok = socket(AF_INET, SOCK_DGRAM, 0);
-	if (sok < 0) {
-		perror("erro ao abrir socket cliente\n");
-		exit(1);
-	}
+	if (sok < 0)
+		erro("erro ao abrir socket cliente");
 	memset(end_cliente, 0, sizeof(struct sockaddr_in));
 	end_cliente->sin_family = AF_INET;
 	end_cliente->sin_port = htons(PORTA);
@@ -83,7 +73,9 @@ static void comeca_com_bastao(void)
 
 	tenho_bastao = TRUE;
 	printf("começando com o bastão!\n");
-	mandar("todos", NULL, PEDE_BASTAO);
+	//mandar("todos", NULL, PEDE_BASTAO);
+	mandar("todos", "pedindo bastao\n", PEDE_BASTAO);
+	recebe_bastao();
 }
 
 static void comeca_sem_bastao(void)
@@ -93,10 +85,12 @@ static void comeca_sem_bastao(void)
 
 	tenho_bastao = FALSE;
 	printf("esperando pelo bastão...\n");
-	do {
-		resposta = receber(&pacote);
+	while ((resposta = receber(&pacote)) != BASTAO) {
+		if (!strcmp(pacote.destino, hostname) || !strcmp(pacote.destino, "todos")) {
+			printf("%s", pacote.mensagem);
+		}
 		passar(&pacote);
-	} while (resposta != BASTAO);
+	}
 	tenho_bastao = TRUE;
 	recebe_bastao();
 }
@@ -105,7 +99,7 @@ int mandar(char *destino, char *mensagem, char tipo)
 {
 	int enviados;
 	struct s_pacote pacote, pacote_resposta;
-	char resposta, pronto;
+	char resposta, pronto, ok;
 	fd_set readfds;
 	struct timeval tval;
 
@@ -114,9 +108,10 @@ int mandar(char *destino, char *mensagem, char tipo)
 	strcpy(pacote.destino, destino);
 	strcpy(pacote.origem, hostname);
 	if (mensagem)
-		strcpy(pacote.mensagem, mensagem);
+		strncpy(pacote.mensagem, mensagem, sizeof(pacote.mensagem));
 	resposta = 0;
-	while (!resposta) {
+	ok = FALSE;
+	while (!ok) {
 		resposta = 0;
 		tval.tv_sec = TIMEOUT_RESPOSTA;
 		tval.tv_usec = 0;
@@ -124,12 +119,16 @@ int mandar(char *destino, char *mensagem, char tipo)
 			enviados = sendto(socket_cliente, &pacote, sizeof(struct s_pacote), 0, (struct sockaddr*)&end_cliente, sizeof(end_cliente));
 		} while (enviados <= 0);
 		printf("pacote enviado\n");
+		if (tipo == BASTAO)
+			return;
 		FD_ZERO(&readfds);
 		FD_SET(socket_servidor, &readfds);
 		pronto = select(socket_servidor + 1, &readfds, NULL, NULL, &tval);
 		if (pronto) {
 			resposta = receber(&pacote_resposta);
 			printf("resposta recebida!\n");
+			//conferir pacote_resposta.lido
+			ok = TRUE;
 		} else {
 			printf("time out de resposta...\n");
 		}
@@ -164,5 +163,24 @@ void passar(struct s_pacote *pacote)
 
 void recebe_bastao(void)
 {
+	time_t start, stop;
+	int diff;
+	struct s_pacote pacote;
+	
+	start = time(NULL);
 	printf("bastão recebido!\n");
+	while ((diff = (int) difftime(time(NULL), start)) < TEMPO_BASTAO) {
+		//leitura não pode ser bloqueante, melhor usar outra thread
+		fgets(pacote.mensagem, sizeof(pacote.mensagem), stdin);
+		mandar("todos", pacote.mensagem, PRINT);
+	}
+	printf("tempo do bastão esgotado...\n");
+	mandar(contatos[inext], "passando o bastão", BASTAO);
+	comeca_sem_bastao();
+}
+
+void erro(char *msg)
+{
+	printf("%s\n", msg);
+	exit(1);
 }
