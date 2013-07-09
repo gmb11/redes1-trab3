@@ -12,4 +12,4 @@ chat.o: chat.c chat.h ring.h
 	$(CC) $(FLAGS) -c chat.c -L. -lpthread
 
 clean: 
-	rm -rf *.o a.out
+	rm -rf *.o $(EXEC)

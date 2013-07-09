@@ -9,10 +9,11 @@ void abrir_chat(void)
 	pthread_join(t_chat, NULL);
 	pthread_join(t_ring, NULL);
 }
+
 void *ring(void *p)
 {
 	abre_sockets();
-	return (void*)0x0;
+	return (void *)0x0;
 }
 
 void *chat(void *p)
@@ -35,11 +36,11 @@ void *chat(void *p)
 				listar_contatos();
 				continue;
 			}
-			while (*ptr != '\n' && (*ptr2++ = *ptr++) != ' ');
+			while (*ptr != '\n' && (*ptr2++ = *ptr++) != ' ') ;
 			if (*ptr == '\n')
 				continue;
 			*--ptr2 = '\0';
-			item->destino = (char) contato_id(destino);
+			item->destino = (char)contato_id(destino);
 			if (item->destino == ihost)
 				continue;
 			if (item->destino < 0) {
@@ -50,7 +51,7 @@ void *chat(void *p)
 			item->destino = TODOS;
 		}
 		ptr2 = strchr(ptr, '\n');
-		if (ptr2) 
+		if (ptr2)
 			*ptr2 = '\0';
 		strcpy(item->mensagem, ptr);
 		pthread_mutex_lock(&mutex);
@@ -58,7 +59,7 @@ void *chat(void *p)
 		pthread_mutex_unlock(&mutex);
 		item = NULL;
 	}
-	return (void*)0x0;
+	return (void *)0x0;
 }
 
 void listar_contatos(void)

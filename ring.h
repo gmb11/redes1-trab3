@@ -25,7 +25,6 @@
 #define BASTAO 1
 #define PEDE_BASTAO 2
 #define PRINT 3
-#define SLEEP 4 /*pra forçar timeout*/
 
 struct s_pacote {
 	char tipo;
@@ -39,7 +38,7 @@ struct s_pacote {
 
 struct tailq_entry {
 	char destino, mensagem[SIZE_BUFFER];
-	TAILQ_ENTRY(tailq_entry) entries;
+	 TAILQ_ENTRY(tailq_entry) entries;
 };
 TAILQ_HEAD(, tailq_entry) my_tailq_head;
 pthread_mutex_t mutex;
@@ -47,6 +46,7 @@ pthread_mutex_t mutex;
 char contatos[4][15], hostname[15];
 struct sockaddr_in end_servidor, end_cliente;
 int socket_servidor, socket_cliente, inext, ihost;
+unsigned char seq[4];
 
 void abre_sockets(void);
 int abre_socket_servidor(struct sockaddr_in *end_servidor);
@@ -57,7 +57,7 @@ char receber(struct s_pacote *pacote);
 void passar(struct s_pacote *pacote);
 void recebe_bastao(void);
 void erro(char *msg);
-void mandar(char destino, char *mensagem, char tipo);
-void mandar_str(char destino, char *mensagem);
+int mandar(char destino, char *mensagem, char tipo);
+int mandar_str(char destino, char *mensagem);
 int foi_lido(char destino, char lido);
 char paridade(struct s_pacote *pacote);

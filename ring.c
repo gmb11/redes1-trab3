@@ -23,8 +23,10 @@ void abre_sockets(void)
 	inext = (ihost + 1) % N_CONTATOS;
 	socket_servidor = abre_socket_servidor(&end_servidor);
 	socket_cliente = abre_socket_cliente(&end_cliente, contatos[inext]);
+	for (i = 0; i < N_CONTATOS; i++)
+		seq[i] = 0;
 	if (ihost == 0) {
-		comeca_com_bastao();	
+		comeca_com_bastao();
 	} else {
 		comeca_sem_bastao();
 	}
@@ -41,7 +43,8 @@ int abre_socket_servidor(struct sockaddr_in *end_servidor)
 	end_servidor->sin_family = AF_INET;
 	end_servidor->sin_port = htons(PORTA);
 	end_servidor->sin_addr.s_addr = htonl(INADDR_ANY);
-	if (bind(sok, (struct sockaddr *)end_servidor, sizeof(struct sockaddr_in))
+	if (bind
+	    (sok, (struct sockaddr *)end_servidor, sizeof(struct sockaddr_in))
 	    < 0)
 		erro("erro no bind");
 
@@ -80,9 +83,16 @@ void comeca_sem_bastao(void)
 
 	memset(&pacote, 0, sizeof(struct s_pacote));
 	while ((resposta = receber(&pacote)) != BASTAO) {
-		if (resposta == PRINT && (pacote.destino == ihost || pacote.destino == TODOS)) {
-			privado = pacote.destino == ihost ? "(privado)" : "\0";
-			printf("<%s>%s: <%s>\n", contatos[(int)pacote.origem], privado, pacote.mensagem);
+		if (resposta == PRINT && pacote.seq == seq[(int)pacote.origem]) {
+			if (pacote.destino == ihost || pacote.destino == TODOS) {
+				privado =
+				    pacote.destino ==
+				    ihost ? "(privado)" : "\0";
+				printf("<%s>%s: <%s>\n",
+				       contatos[(int)pacote.origem], privado,
+				       pacote.mensagem);
+			}
+			seq[(int)pacote.origem]++;
 		}
 		passar(&pacote);
 		memset(&pacote, 0, sizeof(struct s_pacote));
@@ -90,9 +100,9 @@ void comeca_sem_bastao(void)
 	recebe_bastao();
 }
 
-void mandar(char destino, char *mensagem, char tipo)
+int mandar(char destino, char *mensagem, char tipo)
 {
-	int enviados;
+	int enviados, tentativas;
 	struct s_pacote pacote, pacote_resposta;
 	char resposta, pronto, ok, par;
 	fd_set readfds;
@@ -104,52 +114,74 @@ void mandar(char destino, char *mensagem, char tipo)
 	pacote.origem = ihost;
 	if (mensagem)
 		strncpy(pacote.mensagem, mensagem, sizeof(pacote.mensagem));
-	else 
-		printf("mensagem nula?\n");
+	if (tipo == PRINT) {
+		pacote.seq = seq[ihost];
+	}
 	par = paridade(&pacote);
 	pacote.par = par;
-	resposta = 0;
+	tentativas = 0;
 	ok = FALSE;
 	while (!ok) {
+		tentativas++;
 		resposta = 0;
 		tval.tv_sec = TIMEOUT_RESPOSTA;
 		tval.tv_usec = 0;
 		do {
-			enviados = sendto(socket_cliente, &pacote, sizeof(struct s_pacote), 0, (struct sockaddr*)&end_cliente, sizeof(struct sockaddr_in));
+			enviados =
+			    sendto(socket_cliente, &pacote,
+				   sizeof(struct s_pacote), 0,
+				   (struct sockaddr *)&end_cliente,
+				   sizeof(struct sockaddr_in));
 		} while (enviados <= 0);
 		if (tipo == BASTAO)
-			return;
+			return TRUE;
 		FD_ZERO(&readfds);
 		FD_SET(socket_servidor, &readfds);
-		pronto = select(socket_servidor + 1, &readfds, NULL, NULL, &tval);
+		pronto =
+		    select(socket_servidor + 1, &readfds, NULL, NULL, &tval);
 		if (pronto) {
 			resposta = receber(&pacote_resposta);
-			if (resposta != tipo) 
-				printf("resposta diferente do tipo?\n");
-			if (!foi_lido(destino, pacote_resposta.lido))
-				printf("mensagem não foi lida?\n");
-			if (pacote_resposta.par != par)
-				printf("erro de paridade na resposta?\n");
-			ok = TRUE;
+			if (pacote_resposta.origem == ihost && pacote_resposta.seq == seq[ihost]) {
+				ok = TRUE;
+				if (resposta != tipo) {
+					/*
+					   printf("resposta diferente do tipo?\n");
+					 */
+					ok = FALSE;
+				}
+				if (!foi_lido(destino, pacote_resposta.lido)) {
+					/*
+					   printf("mensagem não foi lida?\n");
+					 */
+					ok = FALSE;
+				}
+				if (pacote_resposta.par != par) {
+					/*
+					   printf("erro de paridade na resposta?\n");
+					 */
+					ok = FALSE;
+				}
+				if (tentativas >= 5) {
+					printf("\ttentativas > 5, desistindo\n");
+					ok = TRUE;
+				}
+				if (ok && tipo == PRINT)
+					seq[ihost]++;
+			}
 		} else {
 			if (tipo != PEDE_BASTAO)
 				printf("time out de resposta...\n");
 		}
 	}
+	return tentativas < 5;
 }
 
 int foi_lido(char destino, char lido)
 {
-	char comp;
-
 	if (destino == TODOS)
-		comp = (char) (1 << (N_CONTATOS)) - 1 - (1 << ihost);
+		return lido == (char)(1 << (N_CONTATOS)) - 1 - (1 << ihost);
 	else
-		comp = (char) 1 << destino;
-	if (comp != lido)
-		printf("destino: %u, lido: %u, comp: %u\n", (unsigned int)destino, (unsigned int)lido, (unsigned int)comp);
-
-	return comp == lido;
+		return lido == (char)1 << destino;
 }
 
 char receber(struct s_pacote *pacote)
@@ -159,7 +191,10 @@ char receber(struct s_pacote *pacote)
 	cliente_tam = sizeof(struct sockaddr_in);
 	do {
 		memset(pacote, 0, sizeof(struct s_pacote));
-		recebidos = recvfrom(socket_servidor, pacote, sizeof(struct s_pacote), 0, (struct sockaddr*)&end_servidor, (socklen_t*)&cliente_tam);
+		recebidos =
+		    recvfrom(socket_servidor, pacote, sizeof(struct s_pacote),
+			     0, (struct sockaddr *)&end_servidor,
+			     (socklen_t *) & cliente_tam);
 	} while (!recebidos);
 
 	return pacote->tipo;
@@ -169,13 +204,17 @@ void passar(struct s_pacote *pacote)
 {
 	int enviados;
 
-	if (pacote->par != paridade(pacote)) {
-		printf("\t\tpar recebida: %u, par local: %u\n", (unsigned int)pacote->par, (unsigned int)paridade(pacote));
-	}
 	if (pacote->destino == ihost || pacote->destino == TODOS)
 		pacote->lido |= 1 << ihost;
+	if (strstr(pacote->mensagem, "wait"))
+		if (pacote->destino == ihost
+		    || strstr(pacote->mensagem, hostname))
+			sleep(2);
 	do {
-		enviados = sendto(socket_cliente, pacote, sizeof(struct s_pacote), 0, (struct sockaddr*)&end_cliente, sizeof(struct sockaddr_in));
+		enviados =
+		    sendto(socket_cliente, pacote, sizeof(struct s_pacote), 0,
+			   (struct sockaddr *)&end_cliente,
+			   sizeof(struct sockaddr_in));
 	} while (enviados <= 0);
 }
 
@@ -184,20 +223,26 @@ void recebe_bastao(void)
 	time_t start;
 	int diff;
 	struct tailq_entry *item;
-	
+
 	start = time(NULL);
-	while ((diff = (int) difftime(time(NULL), start)) < TEMPO_BASTAO) {
-		usleep(500000);
+	while ((diff = (int)difftime(time(NULL), start)) < TEMPO_BASTAO) {
+		usleep(100000);
 		pthread_mutex_lock(&mutex);
 		if (TAILQ_EMPTY(&my_tailq_head)) {
 			pthread_mutex_unlock(&mutex);
-			break; /*com esse break, se a fila está vazia o bastão é passado imediatamente*/
+			break;	/*com esse break, se a fila está vazia o bastão é passado imediatamente */
 		} else {
 			item = TAILQ_FIRST(&my_tailq_head);
 			TAILQ_REMOVE(&my_tailq_head, item, entries);
 			pthread_mutex_unlock(&mutex);
-			mandar_str(item->destino, item->mensagem);
-			free(item);
+			if (mandar_str(item->destino, item->mensagem)) {
+				free(item);
+			} else {
+				pthread_mutex_lock(&mutex);
+				TAILQ_INSERT_HEAD(&my_tailq_head, item,
+						  entries);
+				pthread_mutex_unlock(&mutex);
+			}
 		}
 	}
 	mandar(inext, "passando o bastão", BASTAO);
@@ -210,21 +255,25 @@ void erro(char *msg)
 	exit(1);
 }
 
-void mandar_str(char destino, char *mensagem)
-{	
+int mandar_str(char destino, char *mensagem)
+{
 	char buffer[SIZE_MSG], *ptr;
-	int i;
+	int i, ok;
 
 	ptr = mensagem;
-	while (*ptr != '\0') {
+	if (!strcmp("wait", mensagem) && destino == TODOS)
+		sleep(2);
+	ok = TRUE;
+	while (*ptr != '\0' && ok) {
 		memset(buffer, 0, sizeof(buffer));
 		for (i = 0; i < SIZE_MSG; i++) {
 			buffer[i] = *ptr++;
 			if (*ptr == '\0')
 				break;
 		}
-		mandar(destino, buffer, PRINT);
+		ok = mandar(destino, buffer, PRINT);
 	}
+	return ok;
 }
 
 char paridade(struct s_pacote *pacote)
@@ -233,19 +282,10 @@ char paridade(struct s_pacote *pacote)
 	int size, i;
 
 	p = '\0';
-	size = sizeof(struct s_pacote) - 2; /*menos campos de paridade e lido*/
-	ptr = (char*)pacote;
+	size = sizeof(struct s_pacote) - 2;	/*menos campos de paridade e lido */
+	ptr = (char *)pacote;
 	for (i = 0; i < size; i++) {
 		p ^= ptr[i];
 	}
 	return p;
-	/*
-	int i, size = strlen(pacote->mensagem);
-	char *ptr, p = 0;
-	ptr = pacote->mensagem;
-	for (i = 0; i < size; i++) {
-		p ^= ptr[i];
-	}
-	return p;
-	*/
 }
