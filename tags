@@ -1,0 +1,48 @@
+BASTAO	ring.h	24
+CC	Makefile	/^CC=gcc$/
+CONTATOS	ring.h	15
+EXEC	Makefile	/^EXEC=trabalho3$/
+FALSE	ring.h	13
+FLAGS	Makefile	/^FLAGS=-Wall$/
+Mmain	main.c	/^int main(int argc, char **argv)$/
+N_CONTATOS	ring.h	16
+PEDE_BASTAO	ring.h	25
+PORTA	ring.h	14
+PRINT	ring.h	26
+SIZE_BUFFER	ring.h	17
+SIZE_MSG	ring.h	18
+SLEEP	ring.h	27
+TAILQ_ENTRY	ring.h	/^	TAILQ_ENTRY(tailq_entry) entries;$/
+TEMPO_BASTAO	ring.h	21
+TIMEOUT_RESPOSTA	ring.h	20
+TRUE	ring.h	12
+abre_socket_cliente	ring.c	/^int abre_socket_cliente(struct sockaddr_in *end_cl/
+abre_socket_servidor	ring.c	/^int abre_socket_servidor(struct sockaddr_in *end_s/
+abre_sockets	ring.c	/^void abre_sockets(void)$/
+abrir_chat	chat.c	/^void abrir_chat(void)$/
+all	Makefile	/^all: ring.o chat.o main.c$/
+chat	chat.c	/^void *chat(void *p)$/
+chat.o	Makefile	/^chat.o: chat.c chat.h ring.h$/
+clean	Makefile	/^clean: $/
+comeca_com_bastao	ring.c	/^void comeca_com_bastao(void)$/
+comeca_sem_bastao	ring.c	/^void comeca_sem_bastao(void)$/
+destino	ring.h	33
+destino	ring.h	40
+erro	ring.c	/^void erro(char *msg)$/
+lido	ring.h	31
+listar_contatos	chat.c	/^void listar_contatos(void)$/
+mandar	ring.c	/^void mandar(char *destino, char *mensagem, char ti/
+mandar_str	ring.c	/^void mandar_str(char *destino, char *mensagem)$/
+mensagem	ring.h	34
+mensagem	ring.h	40
+origem	ring.h	32
+par	ring.h	35
+passar	ring.c	/^void passar(struct s_pacote *pacote)$/
+recebe_bastao	ring.c	/^void recebe_bastao(void)$/
+receber	ring.c	/^char receber(struct s_pacote *pacote)$/
+ring	chat.c	/^void *ring(void *p)$/
+ring.o	Makefile	/^ring.o: ring.c ring.h$/
+s_pacote	ring.h	29
+seq	ring.h	36
+tailq_entry	ring.h	39
+tipo	ring.h	30
