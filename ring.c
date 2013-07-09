@@ -69,6 +69,7 @@ int abre_socket_cliente(struct sockaddr_in *end_cliente, char *destino)
 void comeca_com_bastao(void)
 {
 	mandar(TODOS, "pedindo bastao", PEDE_BASTAO);
+	printf("anel fechado\n");
 	recebe_bastao();
 }
 
@@ -123,11 +124,28 @@ void mandar(char destino, char *mensagem, char tipo)
 			resposta = receber(&pacote_resposta);
 			if (resposta != tipo) 
 				printf("resposta diferente do tipo?\n");
+			if (!foi_lido(destino, pacote_resposta.lido))
+				printf("mensagem não foi lida?\n");
 			ok = TRUE;
 		} else {
-			//printf("time out de resposta...\n");
+			if (tipo != PEDE_BASTAO)
+				printf("time out de resposta...\n");
 		}
 	}
+}
+
+int foi_lido(char destino, char lido)
+{
+	char comp;
+
+	if (destino == TODOS)
+		comp = (char) (1 << (N_CONTATOS)) - 1 - (1 << ihost);
+	else
+		comp = (char) 1 << destino;
+	if (comp != lido)
+		printf("destino: %u, lido: %u, comp: %u\n", (unsigned int)destino, (unsigned int)lido, (unsigned int)comp);
+
+	return comp == lido;
 }
 
 char receber(struct s_pacote *pacote)
@@ -147,7 +165,8 @@ void passar(struct s_pacote *pacote)
 {
 	int enviados;
 
-	pacote->lido |= 1 << ihost;
+	if (pacote->destino == ihost || pacote->destino == TODOS)
+		pacote->lido |= 1 << ihost;
 	do {
 		enviados = sendto(socket_cliente, pacote, sizeof(struct s_pacote), 0, (struct sockaddr*)&end_cliente, sizeof(end_cliente));
 	} while (enviados <= 0);

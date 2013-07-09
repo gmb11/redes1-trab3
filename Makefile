@@ -1,4 +1,4 @@
-FLAGS=-Wall
+FLAGS=-Wall -g
 EXEC=trabalho3
 CC=gcc
 

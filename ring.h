@@ -60,3 +60,4 @@ void recebe_bastao(void);
 void erro(char *msg);
 void mandar(char destino, char *mensagem, char tipo);
 void mandar_str(char destino, char *mensagem);
+int foi_lido(char destino, char lido);

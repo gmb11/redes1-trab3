@@ -25,6 +25,7 @@ void *chat(void *p)
 		item = item ? item : malloc(sizeof(*item));
 		if (!item)
 			erro("erro no malloc");
+		memset(item, 0, sizeof(*item));
 		fgets(buffer, sizeof(buffer), stdin);
 		ptr = buffer;
 		ptr2 = destino;
@@ -34,9 +35,13 @@ void *chat(void *p)
 				listar_contatos();
 				continue;
 			}
-			while ((*ptr2++ = *ptr++) != ' ');
+			while (*ptr != '\n' && (*ptr2++ = *ptr++) != ' ');
+			if (*ptr == '\n')
+				continue;
 			*--ptr2 = '\0';
 			item->destino = (char) contato_id(destino);
+			if (item->destino == ihost)
+				continue;
 			if (item->destino < 0) {
 				printf("contato inexistente...\n");
 				continue;
