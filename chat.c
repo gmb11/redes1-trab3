@@ -22,11 +22,11 @@ void *chat(void *p)
 
 	item = NULL;
 	while (1) {
-		item = item ? item : malloc(sizeof(*item));
+		item = item ? item : malloc(sizeof(struct tailq_entry));
 		if (!item)
 			erro("erro no malloc");
-		memset(item, 0, sizeof(*item));
-		fgets(buffer, sizeof(buffer), stdin);
+		memset(item, 0, sizeof(struct tailq_entry));
+		fgets(buffer, SIZE_BUFFER, stdin);
 		ptr = buffer;
 		ptr2 = destino;
 		if (ptr[0] == '/') {

@@ -1,4 +1,4 @@
-FLAGS=-Wall -g
+FLAGS=-Wall -g -pedantic
 EXEC=trabalho3
 CC=gcc
 

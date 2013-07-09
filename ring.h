@@ -25,16 +25,16 @@
 #define BASTAO 1
 #define PEDE_BASTAO 2
 #define PRINT 3
-#define SLEEP 4 //pra forçar timeout
+#define SLEEP 4 /*pra forçar timeout*/
 
 struct s_pacote {
 	char tipo;
-	char lido;
 	char origem;
 	char destino;
 	char mensagem[SIZE_MSG];
-	char par;
 	char seq;
+	char par;
+	char lido;
 };
 
 struct tailq_entry {
@@ -51,7 +51,6 @@ int socket_servidor, socket_cliente, inext, ihost;
 void abre_sockets(void);
 int abre_socket_servidor(struct sockaddr_in *end_servidor);
 int abre_socket_cliente(struct sockaddr_in *end_cliente, char *destino);
-char paridade(struct s_pacote pacote);
 void comeca_com_bastao(void);
 void comeca_sem_bastao(void);
 char receber(struct s_pacote *pacote);
@@ -61,3 +60,4 @@ void erro(char *msg);
 void mandar(char destino, char *mensagem, char tipo);
 void mandar_str(char destino, char *mensagem);
 int foi_lido(char destino, char lido);
+char paridade(struct s_pacote *pacote);

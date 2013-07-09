@@ -51,6 +51,7 @@ int abre_socket_servidor(struct sockaddr_in *end_servidor)
 int abre_socket_cliente(struct sockaddr_in *end_cliente, char *destino)
 {
 	int sok;
+	struct hostent *hostp;
 
 	sok = socket(AF_INET, SOCK_DGRAM, 0);
 	if (sok < 0)
@@ -59,7 +60,7 @@ int abre_socket_cliente(struct sockaddr_in *end_cliente, char *destino)
 	end_cliente->sin_family = AF_INET;
 	end_cliente->sin_port = htons(PORTA);
 	end_cliente->sin_addr.s_addr = htonl(INADDR_ANY);
-	struct hostent *hostp = gethostbyname(destino);
+	hostp = gethostbyname(destino);
 	memcpy(&(end_cliente->sin_addr), hostp->h_addr_list[0],
 	       sizeof(end_cliente->sin_addr));
 
@@ -69,7 +70,6 @@ int abre_socket_cliente(struct sockaddr_in *end_cliente, char *destino)
 void comeca_com_bastao(void)
 {
 	mandar(TODOS, "pedindo bastao", PEDE_BASTAO);
-	printf("anel fechado\n");
 	recebe_bastao();
 }
 
@@ -78,14 +78,14 @@ void comeca_sem_bastao(void)
 	struct s_pacote pacote;
 	char resposta, *privado;
 
-	memset(&pacote, 0, sizeof(pacote));
+	memset(&pacote, 0, sizeof(struct s_pacote));
 	while ((resposta = receber(&pacote)) != BASTAO) {
 		if (resposta == PRINT && (pacote.destino == ihost || pacote.destino == TODOS)) {
 			privado = pacote.destino == ihost ? "(privado)" : "\0";
 			printf("<%s>%s: <%s>\n", contatos[(int)pacote.origem], privado, pacote.mensagem);
 		}
 		passar(&pacote);
-		memset(&pacote, 0, sizeof(pacote));
+		memset(&pacote, 0, sizeof(struct s_pacote));
 	}
 	recebe_bastao();
 }
@@ -94,11 +94,11 @@ void mandar(char destino, char *mensagem, char tipo)
 {
 	int enviados;
 	struct s_pacote pacote, pacote_resposta;
-	char resposta, pronto, ok;
+	char resposta, pronto, ok, par;
 	fd_set readfds;
 	struct timeval tval;
 
-	memset(&pacote, 0, sizeof(pacote));
+	memset(&pacote, 0, sizeof(struct s_pacote));
 	pacote.tipo = tipo;
 	pacote.destino = destino;
 	pacote.origem = ihost;
@@ -106,6 +106,8 @@ void mandar(char destino, char *mensagem, char tipo)
 		strncpy(pacote.mensagem, mensagem, sizeof(pacote.mensagem));
 	else 
 		printf("mensagem nula?\n");
+	par = paridade(&pacote);
+	pacote.par = par;
 	resposta = 0;
 	ok = FALSE;
 	while (!ok) {
@@ -113,7 +115,7 @@ void mandar(char destino, char *mensagem, char tipo)
 		tval.tv_sec = TIMEOUT_RESPOSTA;
 		tval.tv_usec = 0;
 		do {
-			enviados = sendto(socket_cliente, &pacote, sizeof(struct s_pacote), 0, (struct sockaddr*)&end_cliente, sizeof(end_cliente));
+			enviados = sendto(socket_cliente, &pacote, sizeof(struct s_pacote), 0, (struct sockaddr*)&end_cliente, sizeof(struct sockaddr_in));
 		} while (enviados <= 0);
 		if (tipo == BASTAO)
 			return;
@@ -126,6 +128,8 @@ void mandar(char destino, char *mensagem, char tipo)
 				printf("resposta diferente do tipo?\n");
 			if (!foi_lido(destino, pacote_resposta.lido))
 				printf("mensagem não foi lida?\n");
+			if (pacote_resposta.par != par)
+				printf("erro de paridade na resposta?\n");
 			ok = TRUE;
 		} else {
 			if (tipo != PEDE_BASTAO)
@@ -152,9 +156,9 @@ char receber(struct s_pacote *pacote)
 {
 	int recebidos, cliente_tam;
 
-	cliente_tam = sizeof(end_servidor);
+	cliente_tam = sizeof(struct sockaddr_in);
 	do {
-		memset(pacote, 0, cliente_tam);
+		memset(pacote, 0, sizeof(struct s_pacote));
 		recebidos = recvfrom(socket_servidor, pacote, sizeof(struct s_pacote), 0, (struct sockaddr*)&end_servidor, (socklen_t*)&cliente_tam);
 	} while (!recebidos);
 
@@ -165,10 +169,13 @@ void passar(struct s_pacote *pacote)
 {
 	int enviados;
 
+	if (pacote->par != paridade(pacote)) {
+		printf("\t\tpar recebida: %u, par local: %u\n", (unsigned int)pacote->par, (unsigned int)paridade(pacote));
+	}
 	if (pacote->destino == ihost || pacote->destino == TODOS)
 		pacote->lido |= 1 << ihost;
 	do {
-		enviados = sendto(socket_cliente, pacote, sizeof(struct s_pacote), 0, (struct sockaddr*)&end_cliente, sizeof(end_cliente));
+		enviados = sendto(socket_cliente, pacote, sizeof(struct s_pacote), 0, (struct sockaddr*)&end_cliente, sizeof(struct sockaddr_in));
 	} while (enviados <= 0);
 }
 
@@ -180,10 +187,11 @@ void recebe_bastao(void)
 	
 	start = time(NULL);
 	while ((diff = (int) difftime(time(NULL), start)) < TEMPO_BASTAO) {
+		usleep(500000);
 		pthread_mutex_lock(&mutex);
 		if (TAILQ_EMPTY(&my_tailq_head)) {
 			pthread_mutex_unlock(&mutex);
-			break;
+			break; /*com esse break, se a fila está vazia o bastão é passado imediatamente*/
 		} else {
 			item = TAILQ_FIRST(&my_tailq_head);
 			TAILQ_REMOVE(&my_tailq_head, item, entries);
@@ -217,4 +225,27 @@ void mandar_str(char destino, char *mensagem)
 		}
 		mandar(destino, buffer, PRINT);
 	}
+}
+
+char paridade(struct s_pacote *pacote)
+{
+	char p, *ptr;
+	int size, i;
+
+	p = '\0';
+	size = sizeof(struct s_pacote) - 2; /*menos campos de paridade e lido*/
+	ptr = (char*)pacote;
+	for (i = 0; i < size; i++) {
+		p ^= ptr[i];
+	}
+	return p;
+	/*
+	int i, size = strlen(pacote->mensagem);
+	char *ptr, p = 0;
+	ptr = pacote->mensagem;
+	for (i = 0; i < size; i++) {
+		p ^= ptr[i];
+	}
+	return p;
+	*/
 }
