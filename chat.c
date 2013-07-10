@@ -13,6 +13,7 @@ void abrir_chat(void)
 void *ring(void *p)
 {
 	abre_sockets();
+
 	return (void *)0x0;
 }
 
@@ -59,6 +60,7 @@ void *chat(void *p)
 		pthread_mutex_unlock(&mutex);
 		item = NULL;
 	}
+
 	return (void *)0x0;
 }
 

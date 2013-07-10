@@ -3,7 +3,6 @@
 
 void *ring(void *p);
 void *chat(void *p);
-
 void abrir_chat(void);
 void listar_contatos(void);
 int contato_id(char *nome);

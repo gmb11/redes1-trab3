@@ -211,6 +211,7 @@ int receber_timeout(struct s_pacote *pacote, int timeout)
 	pronto = select(socket_servidor + 1, &readfds, NULL, NULL, &tval);
 	if (pronto)
 		receber(pacote);
+
 	return pronto;
 }
 
@@ -284,6 +285,7 @@ int mandar_str(char destino, char *mensagem)
 		buffer[i] = '\0';
 		ok = mandar(destino, buffer, PRINT);
 	}
+
 	return ok;
 }
 
@@ -298,5 +300,6 @@ char paridade(struct s_pacote *pacote)
 	for (i = 0; i < size; i++) {
 		p ^= ptr[i];
 	}
+
 	return p;
 }
