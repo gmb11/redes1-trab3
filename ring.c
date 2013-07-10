@@ -91,14 +91,12 @@ void comeca_sem_bastao(void)
 		resposta = pacote.tipo;
 		if (resposta == BASTAO)
 			break;
-		if (resposta == PRINT && pacote.seq == seq[(int)pacote.origem]) {
+		if (resposta == PRINT && pacote.seq != seq[(int)pacote.origem] - 1) {
 			if (pacote.destino == ihost || pacote.destino == TODOS) {
 				privado = pacote.destino == ihost ? "(privado)" : "\0";
-				#ifdef WAIT
 				if (strstr(pacote.mensagem, "wait"))
 					if (pacote.destino == ihost || strstr(pacote.mensagem, hostname))
 						sleep(2);
-				#endif
 				printf("<%s>%s: <%s>\n",
 				       contatos[(int)pacote.origem], privado,
 				       pacote.mensagem);
@@ -151,7 +149,7 @@ int mandar(char destino, char *mensagem, char tipo)
 				return TRUE;
 			if (resposta == PEDE_BASTAO && pacote_resposta.origem != ihost)
 				return FALSE;
-			if (pacote_resposta.origem == ihost && pacote_resposta.seq == seq[ihost]) {
+			if (pacote_resposta.origem == ihost && pacote_resposta.seq != seq[ihost] - 1) {
 				ok = TRUE;
 				if (resposta != tipo || !foi_lido(destino, pacote_resposta.lido) || pacote_resposta.par != par) {
 					ok = FALSE;
@@ -273,12 +271,6 @@ int mandar_str(char destino, char *mensagem)
 	int i, ok;
 
 	ptr = mensagem;
-	#ifdef WAIT
-	if (!strcmp("wait", mensagem) && destino == TODOS) {
-		sleep(TIMEOUT_BASTAO + 1);
-		return TRUE;
-	}
-	#endif
 	ok = TRUE;
 	while (*ptr != '\0' && ok) {
 		memset(buffer, 0, sizeof(buffer));
