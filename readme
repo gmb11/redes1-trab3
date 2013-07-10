@@ -1,0 +1,14 @@
+Guilherme Manteuffel Bettu
+GRR 2011 2498
+
+	Redes1 - Trabalho 3 - Chat com 4 máquinas simulando tokenring
+
+As 4 máquinas precisam estar declaradas no arquivo "contatos.txt", na mesma ordem pra todas, sendo que a primeira será a primeira a começar com o bastão e cada máquina apenas receberá mensagens da máquina anterior e enviará mensagens pra máquina seguinte.
+Cada máquina usa 2 threads, uma pra ler da entrada padrão e outra pra receber/enviar os pacotes.
+	CHAT:
+	Se o contato for conhecido (e diferente do localhost), ou nenhum contato for declarado, a mensagem é colocada numa FIFO.
+	RING:
+	Se a máquina está com o bastão e a FIFO não está vazia, enquanto durar o TEMPO_BASTAO, a máquina tenta enviar as mensagens, primeiro quebrando-as em partes menores pra colocá-las no pacote (de tamanho fixo) e depois mandando o pacote e esperando uma resposta. No caso de algum problema (timeout da resposta com select(), paridade, não foi lido), o pacote é enviada novamente no máximo 5 vezes (ignorando o TEMPO_BASTAO) e, se ainda assim a resposta não for ok, a mensagem é colocada no começo da FIFO pra ser enviada novamente da próxima vez que a máquina tiver o bastão.
+	Se a máquina não está com o bastão, ela fica apenas esperando pra receber o bastão ou dar timeout do tempo de espera (usando select() também), o que vier primeiro.
+	Ao receber uma mensagem, caso o tipo seja PRINT e o número de sequência não seja igual ao último recebido, a mensagem vai pra saída padrão. Depois a mensagem é marcada como lida e passada pra frente.
+	Caso o tempo de timeout de espera do bastão estoure, a máquina começa a enviar mensagens pra frente pedindo o bastão e outras que receberem essa mensagem desistem de ficar com o bastão e a passam pra frente, até o anel ser fechado de novo.
