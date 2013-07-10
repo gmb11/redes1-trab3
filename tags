@@ -1,20 +1,21 @@
-BASTAO	ring.h	29
-CONTATOS	ring.h	18
-FALSE	ring.h	16
+BASTAO	ring.h	28
+CONTATOS	ring.h	15
+FALSE	ring.h	13
 Mmain	main.c	/^int main(int argc, char **argv)$/
-N_CONTATOS	ring.h	19
-N_TENTATIVAS	ring.h	20
-PEDE_BASTAO	ring.h	30
-PORTA	ring.h	17
-PRINT	ring.h	31
-SIZE_BUFFER	ring.h	21
-SIZE_MSG	ring.h	22
+N_CONTATOS	ring.h	16
+N_TENTATIVAS	ring.h	17
+PEDE_BASTAO	ring.h	29
+PORTA	ring.h	14
+PRINT	ring.h	30
+SIZE_BUFFER	ring.h	18
+SIZE_MSG	ring.h	19
 TAILQ_ENTRY	ring.h	/^	 TAILQ_ENTRY(tailq_entry) entries;$/
-TEMPO_BASTAO	ring.h	26
-TIMEOUT_RESPOSTA	ring.h	25
-TODOS	ring.h	23
-TRUE	ring.h	15
-WAIT	ring.h	13
+TEMPO_BASTAO	ring.h	23
+TEMPO_MINIMO	ring.h	25
+TIMEOUT_BASTAO	ring.h	24
+TIMEOUT_RESPOSTA	ring.h	22
+TODOS	ring.h	20
+TRUE	ring.h	12
 abre_socket_cliente	ring.c	/^int abre_socket_cliente(struct sockaddr_in *end_cl/
 abre_socket_servidor	ring.c	/^int abre_socket_servidor(struct sockaddr_in *end_s/
 abre_sockets	ring.c	/^void abre_sockets(void)$/
@@ -23,24 +24,25 @@ chat	chat.c	/^void *chat(void *p)$/
 comeca_com_bastao	ring.c	/^void comeca_com_bastao(void)$/
 comeca_sem_bastao	ring.c	/^void comeca_sem_bastao(void)$/
 contato_id	chat.c	/^int contato_id(char *nome)$/
-destino	ring.h	36
-destino	ring.h	44
+destino	ring.h	35
+destino	ring.h	43
 erro	ring.c	/^void erro(char *msg)$/
 foi_lido	ring.c	/^int foi_lido(char destino, char lido)$/
-lido	ring.h	40
+lido	ring.h	39
 listar_contatos	chat.c	/^void listar_contatos(void)$/
 mandar	ring.c	/^int mandar(char destino, char *mensagem, char tipo/
 mandar_str	ring.c	/^int mandar_str(char destino, char *mensagem)$/
-mensagem	ring.h	37
-mensagem	ring.h	44
-origem	ring.h	35
-par	ring.h	39
+mensagem	ring.h	36
+mensagem	ring.h	43
+origem	ring.h	34
+par	ring.h	38
 paridade	ring.c	/^char paridade(struct s_pacote *pacote)$/
 passar	ring.c	/^void passar(struct s_pacote *pacote)$/
 recebe_bastao	ring.c	/^void recebe_bastao(void)$/
-receber	ring.c	/^char receber(struct s_pacote *pacote)$/
+receber	ring.c	/^void receber(struct s_pacote *pacote)$/
+receber_timeout	ring.c	/^int receber_timeout(struct s_pacote *pacote, int t/
 ring	chat.c	/^void *ring(void *p)$/
-s_pacote	ring.h	33
-seq	ring.h	38
-tailq_entry	ring.h	43
-tipo	ring.h	34
+s_pacote	ring.h	32
+seq	ring.h	37
+tailq_entry	ring.h	42
+tipo	ring.h	33

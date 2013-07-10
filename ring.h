@@ -19,8 +19,10 @@
 #define SIZE_MSG 30
 #define TODOS 99
 
-#define TIMEOUT_RESPOSTA 1
-#define TEMPO_BASTAO 2
+#define TIMEOUT_RESPOSTA 500000
+#define TEMPO_BASTAO 1
+#define TIMEOUT_BASTAO TEMPO_BASTAO * N_CONTATOS + 1
+#define TEMPO_MINIMO 100000
 
 /*tipos de mensagem*/
 #define BASTAO 1
@@ -54,7 +56,8 @@ int abre_socket_servidor(struct sockaddr_in *end_servidor);
 int abre_socket_cliente(struct sockaddr_in *end_cliente, char *destino);
 void comeca_com_bastao(void);
 void comeca_sem_bastao(void);
-char receber(struct s_pacote *pacote);
+void receber(struct s_pacote *pacote);
+int receber_timeout(struct s_pacote *pacote, int timeout);
 void passar(struct s_pacote *pacote);
 void recebe_bastao(void);
 void erro(char *msg);
