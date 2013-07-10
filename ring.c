@@ -85,9 +85,12 @@ void comeca_sem_bastao(void)
 	while ((resposta = receber(&pacote)) != BASTAO) {
 		if (resposta == PRINT && pacote.seq == seq[(int)pacote.origem]) {
 			if (pacote.destino == ihost || pacote.destino == TODOS) {
-				privado =
-				    pacote.destino ==
-				    ihost ? "(privado)" : "\0";
+				privado = pacote.destino == ihost ? "(privado)" : "\0";
+				#ifdef WAIT
+				if (strstr(pacote.mensagem, "wait"))
+					if (pacote.destino == ihost || strstr(pacote.mensagem, hostname))
+						sleep(2);
+				#endif
 				printf("<%s>%s: <%s>\n",
 				       contatos[(int)pacote.origem], privado,
 				       pacote.mensagem);
@@ -161,16 +164,16 @@ int mandar(char destino, char *mensagem, char tipo)
 					 */
 					ok = FALSE;
 				}
-				if (tentativas >= 5) {
-					printf("\ttentativas > 5, desistindo\n");
-					ok = TRUE;
+				if (tipo == PRINT && tentativas >= N_TENTATIVAS) {
+					printf("\t\ttentativas > %d, desistindo\n", N_TENTATIVAS);
+					ok = TRUE; /*pra evitar possível loop*/
 				}
 				if (ok && tipo == PRINT)
 					seq[ihost]++;
 			}
 		} else {
 			if (tipo != PEDE_BASTAO)
-				printf("time out de resposta...\n");
+				printf("\t\ttime out de resposta...\n");
 		}
 	}
 	return tentativas < 5;
@@ -206,10 +209,6 @@ void passar(struct s_pacote *pacote)
 
 	if (pacote->destino == ihost || pacote->destino == TODOS)
 		pacote->lido |= 1 << ihost;
-	if (strstr(pacote->mensagem, "wait"))
-		if (pacote->destino == ihost
-		    || strstr(pacote->mensagem, hostname))
-			sleep(2);
 	do {
 		enviados =
 		    sendto(socket_cliente, pacote, sizeof(struct s_pacote), 0,
@@ -226,7 +225,7 @@ void recebe_bastao(void)
 
 	start = time(NULL);
 	while ((diff = (int)difftime(time(NULL), start)) < TEMPO_BASTAO) {
-		usleep(100000);
+		usleep(100000); /*pra não ficar passando o bastão direto e sobrecarregar a rede*/
 		pthread_mutex_lock(&mutex);
 		if (TAILQ_EMPTY(&my_tailq_head)) {
 			pthread_mutex_unlock(&mutex);
@@ -237,7 +236,7 @@ void recebe_bastao(void)
 			pthread_mutex_unlock(&mutex);
 			if (mandar_str(item->destino, item->mensagem)) {
 				free(item);
-			} else {
+			} else { /*se N_TENTATIVAS não mandaram a mensagem, desiste e a coloca no começo da fila*/
 				pthread_mutex_lock(&mutex);
 				TAILQ_INSERT_HEAD(&my_tailq_head, item,
 						  entries);
@@ -261,16 +260,21 @@ int mandar_str(char destino, char *mensagem)
 	int i, ok;
 
 	ptr = mensagem;
+	#ifdef WAIT
 	if (!strcmp("wait", mensagem) && destino == TODOS)
 		sleep(2);
+	#endif
 	ok = TRUE;
 	while (*ptr != '\0' && ok) {
 		memset(buffer, 0, sizeof(buffer));
-		for (i = 0; i < SIZE_MSG; i++) {
+		for (i = 0; i < SIZE_MSG - 1; i++) {
 			buffer[i] = *ptr++;
 			if (*ptr == '\0')
 				break;
 		}
+		if (i < SIZE_MSG - 1)
+			i++;
+		buffer[i] = '\0';
 		ok = mandar(destino, buffer, PRINT);
 	}
 	return ok;

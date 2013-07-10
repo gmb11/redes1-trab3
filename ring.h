@@ -9,11 +9,15 @@
 #include <sys/queue.h>
 #include <pthread.h>
 
+/*se wait não for definido, não reconhece o comando wait pra forçar timeout*/
+#define WAIT 1
+
 #define TRUE 1
 #define FALSE 0
 #define PORTA 3432
 #define CONTATOS "contatos.txt"
 #define N_CONTATOS 4
+#define N_TENTATIVAS 5
 #define SIZE_BUFFER 256
 #define SIZE_MSG 30
 #define TODOS 99
