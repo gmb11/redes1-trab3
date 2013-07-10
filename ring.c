@@ -168,7 +168,10 @@ int mandar(char destino, char *mensagem, char tipo)
 				printf("\t\ttime out de resposta...\n");
 		}
 	}
-	return tentativas < 5;
+	if (tipo == PRINT)
+		return tentativas < 5;
+	else 
+		return TRUE;
 }
 
 int foi_lido(char destino, char lido)
@@ -198,7 +201,7 @@ int receber_timeout(struct s_pacote *pacote, int timeout)
 	struct timeval tval;
 	int pronto;
 
-	if (timeout < 50) {
+	if (timeout < 100) {
 		tval.tv_sec = timeout;
 		tval.tv_usec = 0;
 	} else {
@@ -271,8 +274,10 @@ int mandar_str(char destino, char *mensagem)
 
 	ptr = mensagem;
 	#ifdef WAIT
-	if (!strcmp("wait", mensagem) && destino == TODOS)
-		sleep(TIMEOUT_BASTAO + N_CONTATOS); /*tempo certo???*/
+	if (!strcmp("wait", mensagem) && destino == TODOS) {
+		sleep(TIMEOUT_BASTAO + 1);
+		return TRUE;
+	}
 	#endif
 	ok = TRUE;
 	while (*ptr != '\0' && ok) {

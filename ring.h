@@ -22,6 +22,9 @@
 #define TIMEOUT_RESPOSTA 500000
 #define TEMPO_BASTAO 1
 #define TIMEOUT_BASTAO TEMPO_BASTAO * N_CONTATOS + 1
+/*
+#define TIMEOUT_BASTAO 60
+*/
 #define TEMPO_MINIMO 100000
 
 /*tipos de mensagem*/
