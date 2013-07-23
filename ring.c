@@ -87,6 +87,11 @@ void comeca_sem_bastao(void)
 
 	timeout = TIMEOUT_BASTAO;
 	memset(&pacote, 0, sizeof(struct s_pacote));
+	/*ASSIM O TIMEOUT DE ESPERA PELO BASTÃO É EVITADO COM O RECEBIMENTO DE 
+	  QUALQUER PACOTE, NÃO SÓ DO PACOTE PASSANDO O BASTÃO.
+	  O CERTO SERIA USAR RECEBER_TIMEOUT DENTRO DUM LOOP CONTANDO O TEMPO PASSADO 
+	  E A CADA NOVA ITERAÇÃO DIMINUIR O TEMPO RESTANTE DE TIMEOUT
+	  ATÉ QUE O BASTÃO SEJA RECEBIDO*/
 	while (receber_timeout(&pacote, timeout)) {
 		resposta = pacote.tipo;
 		if (resposta == BASTAO)
